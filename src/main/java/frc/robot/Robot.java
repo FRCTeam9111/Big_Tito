@@ -4,9 +4,15 @@
 
 package frc.robot;
 
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+
+import edu.wpi.first.cameraserver.CameraServer;
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
-import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -15,20 +21,50 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * project.
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kCustomAuto = "My Auto";
-  private String m_autoSelected;
-  private final SendableChooser<String> m_chooser = new SendableChooser<>();
+ 
+  private final CANSparkMax m_leadMotorleft = new CANSparkMax(3, MotorType.kBrushed);
+  //private final CANSparkMax m_arm = new CANSparkMax(9, MotorType.kBrushless);
+  private final CANSparkMax m_followMotorleft = new CANSparkMax(4, MotorType.kBrushed);
+  private final CANSparkMax m_followMotorright = new CANSparkMax(1, MotorType.kBrushed);
+  private final CANSparkMax m_rightArm = new CANSparkMax(5, MotorType.kBrushed);
+  private final CANSparkMax m_leftArm = new CANSparkMax(6, MotorType.kBrushed);
+  private final CANSparkMax m_leadMotorright = new CANSparkMax(2, MotorType.kBrushed);
+  private final CANSparkMax m_Intake = new CANSparkMax(7, MotorType.kBrushed);
+  //private final CANSparkMax m_liftMotor = new CANSparkMax(6, MotorType.kBrushless);
+  private final DifferentialDrive m_robotDrive = new DifferentialDrive(m_leadMotorleft, m_leadMotorright);
+  //Joystick controller
+  private final Joystick m_controller = new Joystick(0);
+  //Intake timer
+  private final Timer m_timer = new Timer();
 
+  //Camera Thread
+  Thread m_visionThread;
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
-    m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
-    m_chooser.addOption("My Auto", kCustomAuto);
-    SmartDashboard.putData("Auto choices", m_chooser);
+   // Syncs the left side of the motors with one another
+   m_followMotorleft.follow(m_leadMotorleft);
+
+   // Syncs the right side of the motors with one another
+   m_followMotorright.follow(m_leadMotorright);
+
+   
+
+   m_visionThread = new Thread(
+        () -> {
+          var camera = CameraServer.startAutomaticCapture();
+
+          var cameraWidth = 640;
+          var cameraHeight = 480;
+
+          camera.setResolution(cameraWidth, cameraHeight);        
+        });
+    m_visionThread.setDaemon(true);
+    m_visionThread.start(); 
+
   }
 
   /**
@@ -39,58 +75,66 @@ public class Robot extends TimedRobot {
    * SmartDashboard integrated updating.
    */
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+  
+  }
 
-  /**
-   * This autonomous (along with the chooser code above) shows how to select between different
-   * autonomous modes using the dashboard. The sendable chooser code works with the Java
-   * SmartDashboard. If you prefer the LabVIEW Dashboard, remove all of the chooser code and
-   * uncomment the getString line to get the auto name from the text box below the Gyro
-   *
-   * <p>You can add additional auto modes by adding additional comparisons to the switch structure
-   * below with additional strings. If using the SendableChooser make sure to add them to the
-   * chooser code above as well.
-   */
+  /** This function is called once each time the robot enters Disabled mode. */
+  @Override
+  public void disabledInit() {}
+
+  @Override
+  public void disabledPeriodic() {}
+
+  /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    m_autoSelected = m_chooser.getSelected();
-    // m_autoSelected = SmartDashboard.getString("Auto Selector", kDefaultAuto);
-    System.out.println("Auto selected: " + m_autoSelected);
+ 
   }
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {
-    switch (m_autoSelected) {
-      case kCustomAuto:
-        // Put custom auto code here
-        break;
-      case kDefaultAuto:
-      default:
-        // Put default auto code here
-        break;
-    }
-  }
+  public void autonomousPeriodic() {}
 
-  /** This function is called once when teleop is enabled. */
   @Override
-  public void teleopInit() {}
+  public void teleopInit() {
+    m_timer.reset();
+    m_timer.start();
+  }
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {}
+  public void teleopPeriodic() {
 
-  /** This function is called once when the robot is disabled. */
-  @Override
-  public void disabledInit() {}
+    // joystick 
+    m_robotDrive.arcadeDrive(-m_controller.getRawAxis(0) * .5, -m_controller.getRawAxis(1) * .8);
+    //intake load
+    if (m_controller.getRawButtonPressed(2)) {
+      double time = m_timer.get();  // intake values might need to be inverted
+      while (m_timer.get() - time < .5) {
+        m_Intake.set(.25);
+        }
+      }
+    //intake shoot
+    if (m_controller.getRawButtonPressed(2)) {
+      m_Intake.set(-.25);
+    }
+    //arm
+    if (m_controller.getRawAxis(6)>0) { 
+      m_leftArm.set(.25);
+      m_rightArm.set(-.25);
+    }
+    //arm reverse
+    if (m_controller.getRawAxis(6)<0) { 
+      m_leftArm.set(-.25);
+      m_rightArm.set(.25);
+    }
+  }
 
-  /** This function is called periodically when disabled. */
   @Override
-  public void disabledPeriodic() {}
-
-  /** This function is called once when test mode is enabled. */
-  @Override
-  public void testInit() {}
+  public void testInit() {
+ 
+  }
 
   /** This function is called periodically during test mode. */
   @Override

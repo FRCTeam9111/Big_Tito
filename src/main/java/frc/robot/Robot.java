@@ -160,6 +160,8 @@ public class Robot extends TimedRobot {
       m_rightArm.set(-.25);
     }
     else{
+      m_leftArm.setIdleMode(IdleMode.kBrake);
+      m_rightArm.setIdleMode(IdleMode.kBrake);
       m_leftArm.set(0);
       m_rightArm.set(0);
     }

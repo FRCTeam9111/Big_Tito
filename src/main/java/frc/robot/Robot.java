@@ -5,6 +5,7 @@
 package frc.robot;
 
 import com.revrobotics.CANSparkMax;
+import com.revrobotics.CANSparkMax.IdleMode;
 import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 
 import edu.wpi.first.cameraserver.CameraServer;
@@ -23,14 +24,15 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 public class Robot extends TimedRobot {
  
   private final CANSparkMax m_leadMotorleft = new CANSparkMax(3, MotorType.kBrushed);
-  //private final CANSparkMax m_arm = new CANSparkMax(9, MotorType.kBrushless);
+  private final CANSparkMax m_leadMotorright = new CANSparkMax(2, MotorType.kBrushed);
   private final CANSparkMax m_followMotorleft = new CANSparkMax(4, MotorType.kBrushed);
   private final CANSparkMax m_followMotorright = new CANSparkMax(1, MotorType.kBrushed);
-  private final CANSparkMax m_rightArm = new CANSparkMax(5, MotorType.kBrushed);
-  private final CANSparkMax m_leftArm = new CANSparkMax(6, MotorType.kBrushed);
-  private final CANSparkMax m_leadMotorright = new CANSparkMax(2, MotorType.kBrushed);
-  private final CANSparkMax m_Intake = new CANSparkMax(7, MotorType.kBrushed);
-  //private final CANSparkMax m_liftMotor = new CANSparkMax(6, MotorType.kBrushless);
+  private final CANSparkMax m_rightArm = new CANSparkMax(5, MotorType.kBrushless);
+  private final CANSparkMax m_leftArm = new CANSparkMax(6, MotorType.kBrushless);
+  
+  private final CANSparkMax m_intake = new CANSparkMax(7, MotorType.kBrushless);
+  private final CANSparkMax m_followIntake = new CANSparkMax(8,MotorType.kBrushless);
+  
   private final DifferentialDrive m_robotDrive = new DifferentialDrive(m_leadMotorleft, m_leadMotorright);
   //Joystick controller
   private final Joystick m_controller = new Joystick(0);
@@ -51,7 +53,8 @@ public class Robot extends TimedRobot {
    // Syncs the right side of the motors with one another
    m_followMotorright.follow(m_leadMotorright);
 
-   
+   //Syncs top intake motor with bottom intake motor
+   m_followIntake.follow(m_intake);
 
    m_visionThread = new Thread(
         () -> {
@@ -107,28 +110,63 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
 
     // joystick 
-    m_robotDrive.arcadeDrive(-m_controller.getRawAxis(0) * .5, -m_controller.getRawAxis(1) * .8);
+    m_robotDrive.arcadeDrive(-m_controller.getRawAxis(0) * .8, m_controller.getRawAxis(1) * .8);
     //intake load
+    //System.out.println("button 1 " + m_controller.getRawButton(1));
+    //System.out.println("button 2 " + m_controller.getRawButtonPressed(2));
+
     if (m_controller.getRawButtonPressed(2)) {
       double time = m_timer.get();  // intake values might need to be inverted
-      while (m_timer.get() - time < .5) {
-        m_Intake.set(.25);
-        }
+     // while (m_timer.get() - time < .5) {
+        m_intake.set(.25);
+       // }
       }
+    
+      if (m_controller.getRawButtonReleased(2)) {
+        
+          m_intake.set(0);
+        
+        }
+
+
     //intake shoot
-    if (m_controller.getRawButtonPressed(2)) {
-      m_Intake.set(-.25);
+    if (m_controller.getRawButtonPressed(1)) {
+      m_intake.set(-.25);
+      System.out.println("B1 pressed");
     }
-    //arm
-    if (m_controller.getRawAxis(6)>0) { 
+    if (m_controller.getRawButtonReleased(1)) {
+      m_intake.set(0);
+      System.out.println("B1 released");
+
+    }
+
+   // System.out.println(m_controller.getPOV());
+    
+
+    //arm up
+   if (m_controller.getPOV()==0) { 
+      m_leftArm.setIdleMode(IdleMode.kCoast);
+      m_rightArm.setIdleMode(IdleMode.kCoast);
+
+      m_leftArm.set(-.25);
+      m_rightArm.set(.25);
+      
+    }
+    //arm down
+    else if (m_controller.getPOV()==180) { 
+      m_leftArm.setIdleMode(IdleMode.kBrake);
+      m_rightArm.setIdleMode(IdleMode.kBrake);
       m_leftArm.set(.25);
       m_rightArm.set(-.25);
     }
-    //arm reverse
-    if (m_controller.getRawAxis(6)<0) { 
-      m_leftArm.set(-.25);
-      m_rightArm.set(.25);
+    else{
+      m_leftArm.set(0);
+      m_rightArm.set(0);
     }
+
+    
+
+    System.out.println(m_controller.getPOV());
   }
 
   @Override

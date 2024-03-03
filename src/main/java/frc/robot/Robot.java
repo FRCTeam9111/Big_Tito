@@ -32,6 +32,8 @@ public class Robot extends TimedRobot {
   
   private final CANSparkMax m_intake = new CANSparkMax(7, MotorType.kBrushless);
   private final CANSparkMax m_followIntake = new CANSparkMax(8,MotorType.kBrushless);
+    private final CANSparkMax chainClimb = new CANSparkMax(9,MotorType.kBrushless);
+
   
   private final DifferentialDrive m_robotDrive = new DifferentialDrive(m_leadMotorleft, m_leadMotorright);
   //Joystick controller
@@ -52,9 +54,7 @@ public class Robot extends TimedRobot {
 
    // Syncs the right side of the motors with one another
    m_followMotorright.follow(m_leadMotorright);
-
-   //Syncs top intake motor with bottom intake motor
-   m_followIntake.follow(m_intake);
+   
 
    m_visionThread = new Thread(
         () -> {
@@ -118,24 +118,27 @@ public class Robot extends TimedRobot {
     if (m_controller.getRawButtonPressed(2)) {
       double time = m_timer.get();  // intake values might need to be inverted
      // while (m_timer.get() - time < .5) {
-        m_intake.set(.25);
+        m_intake.set(.5);
+        m_followIntake.set(-.8);
        // }
       }
     
       if (m_controller.getRawButtonReleased(2)) {
         
           m_intake.set(0);
+          m_followIntake.set(0);
         
         }
 
-
     //intake shoot
     if (m_controller.getRawButtonPressed(1)) {
-      m_intake.set(-.25);
+      m_intake.set(-.5);
+      m_followIntake.set(.8);
       System.out.println("B1 pressed");
     }
     if (m_controller.getRawButtonReleased(1)) {
       m_intake.set(0);
+      m_followIntake.set(0);
       System.out.println("B1 released");
 
     }
@@ -148,8 +151,8 @@ public class Robot extends TimedRobot {
       m_leftArm.setIdleMode(IdleMode.kCoast);
       m_rightArm.setIdleMode(IdleMode.kCoast);
 
-      m_leftArm.set(-.25);
-      m_rightArm.set(.25);
+      m_leftArm.set(-.15);
+      m_rightArm.set(.15);
       
     }
     //arm down
@@ -165,13 +168,32 @@ public class Robot extends TimedRobot {
       m_leftArm.set(0);
       m_rightArm.set(0);
     }
-
-    
-
-    System.out.println(m_controller.getPOV());
+    if(m_controller.getRawButtonPressed(6))
+    {
+      chainClimb.set(.75);
+      m_rightArm.set(-.5);
+      m_leftArm.set(.5);
+    }
+    if(m_controller.getRawButtonReleased(6))
+    {
+      chainClimb.set(0);
+      m_rightArm.set(0);
+      m_leftArm.set(0);
+    }
+    if(m_controller.getRawButtonPressed(5))
+    {
+      chainClimb.set(-.75);
+      m_rightArm.set(.5);
+      m_leftArm.set(-.5);
+    }
+    if(m_controller.getRawButtonReleased(5))
+    {
+      chainClimb.set(0);
+      m_rightArm.set(0);
+      m_leftArm.set(0);
+    }
   }
-
-  @Override
+@Override
   public void testInit() {
  
   }

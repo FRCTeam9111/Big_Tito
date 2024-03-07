@@ -33,6 +33,7 @@ public class Robot extends TimedRobot {
   private final CANSparkMax m_intake = new CANSparkMax(7, MotorType.kBrushless);
   private final CANSparkMax m_followIntake = new CANSparkMax(8,MotorType.kBrushless);
     private final CANSparkMax chainClimb = new CANSparkMax(9,MotorType.kBrushless);
+    private boolean climbMode = false;
 
   
   private final DifferentialDrive m_robotDrive = new DifferentialDrive(m_leadMotorleft, m_leadMotorright);
@@ -97,8 +98,26 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {}
-
+  public void autonomousPeriodic() { 
+    double time = m_timer.get();  // intake values might need to be inverted
+     if (m_timer.get() - time < 3) {
+      m_leadMotorright.set(-.5);
+      m_leadMotorleft.set(-.5);
+     }
+     //blue alliance turn right
+     else if (m_timer.get() < 3.5 && m_timer.get() > 3) {
+      
+      m_leadMotorleft.set(.30);
+    m_leadMotorright.set(-.30);
+     }
+     //red alliance turn left
+      /*else if (m_timer.get() < 3.5 && m_timer.get() > 3) {
+      
+      m_leadMotorleft.set(-.30);
+      m_leadMotorright.set(.30);
+    }
+    */
+  }
   @Override
   public void teleopInit() {
     m_timer.reset();
@@ -118,21 +137,19 @@ public class Robot extends TimedRobot {
     if (m_controller.getRawButtonPressed(2)) {
       double time = m_timer.get();  // intake values might need to be inverted
      // while (m_timer.get() - time < .5) {
-        m_intake.set(.5);
+        m_intake.set(.8);
         m_followIntake.set(-.8);
        // }
       }
-    
-      if (m_controller.getRawButtonReleased(2)) {
+    if (m_controller.getRawButtonReleased(2)) {
         
           m_intake.set(0);
           m_followIntake.set(0);
-        
         }
 
     //intake shoot
     if (m_controller.getRawButtonPressed(1)) {
-      m_intake.set(-.5);
+      m_intake.set(-.8);
       m_followIntake.set(.8);
       System.out.println("B1 pressed");
     }
@@ -140,39 +157,52 @@ public class Robot extends TimedRobot {
       m_intake.set(0);
       m_followIntake.set(0);
       System.out.println("B1 released");
-
     }
-
-   // System.out.println(m_controller.getPOV());
-    
 
     //arm up
    if (m_controller.getPOV()==0) { 
+      System.out.println("arm up");
       m_leftArm.setIdleMode(IdleMode.kCoast);
       m_rightArm.setIdleMode(IdleMode.kCoast);
 
-      m_leftArm.set(-.15);
-      m_rightArm.set(.15);
-      
+      m_leftArm.set(-.5);
+      m_rightArm.set(.5);
     }
     //arm down
     else if (m_controller.getPOV()==180) { 
+      System.out.println("arm up");
       m_leftArm.setIdleMode(IdleMode.kBrake);
       m_rightArm.setIdleMode(IdleMode.kBrake);
       m_leftArm.set(.25);
       m_rightArm.set(-.25);
     }
-    else{
+    //arm joystick released
+    else if(!climbMode){//if(m_controller.getPOV()==-1 && !m_controller.getRawButtonPressed(6) && !m_controller.getRawButtonPressed(5)){
       m_leftArm.setIdleMode(IdleMode.kBrake);
       m_rightArm.setIdleMode(IdleMode.kBrake);
       m_leftArm.set(0);
       m_rightArm.set(0);
     }
+
+    //Chain climber
+    if(m_controller.getRawButtonPressed(4))
+    {
+      climbMode = true;
+      m_leftArm.setIdleMode(IdleMode.kCoast);
+      m_rightArm.setIdleMode(IdleMode.kCoast);
+    }
+    if(m_controller.getRawButtonPressed(3))
+    {
+      climbMode = false;
+    }
     if(m_controller.getRawButtonPressed(6))
     {
+      System.out.println("6 pressed");
+      m_leftArm.setIdleMode(IdleMode.kCoast);
+      m_rightArm.setIdleMode(IdleMode.kCoast);
       chainClimb.set(.75);
-      m_rightArm.set(-.5);
-      m_leftArm.set(.5);
+      //m_rightArm.set(-.2);
+      //m_leftArm.set(.2);
     }
     if(m_controller.getRawButtonReleased(6))
     {
@@ -182,9 +212,12 @@ public class Robot extends TimedRobot {
     }
     if(m_controller.getRawButtonPressed(5))
     {
+      System.out.println("5 pressed");
+      m_leftArm.setIdleMode(IdleMode.kCoast);
+      m_rightArm.setIdleMode(IdleMode.kCoast);
       chainClimb.set(-.75);
-      m_rightArm.set(.5);
-      m_leftArm.set(-.5);
+      //m_rightArm.set(.2);
+      //m_leftArm.set(-.2);
     }
     if(m_controller.getRawButtonReleased(5))
     {
@@ -193,6 +226,7 @@ public class Robot extends TimedRobot {
       m_leftArm.set(0);
     }
   }
+
 @Override
   public void testInit() {
  
